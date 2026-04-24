@@ -95,7 +95,7 @@ class LoginView:
 
     def build(self):
         self.txt_pin = ft.TextField(
-            hint_text="Código de Empleado (Ej: cajera456)",
+            hint_text="Ingrese su código de acceso",
             border_color=self.COLOR_MARINO,
             width=400,
             password=True,
