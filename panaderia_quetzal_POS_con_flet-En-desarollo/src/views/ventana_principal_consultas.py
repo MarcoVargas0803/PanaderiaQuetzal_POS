@@ -28,13 +28,13 @@ class PrincipalConsultasView:
     def widget_tarjeta(self, titulo: str, valor: str, icono: str, color_icono: str):
         return ft.Container(
             content=ft.Row([
-                ft.Icon(icono, color=color_icono, size=30),
+                ft.Icon(icono, color=color_icono, size=24),
                 ft.Column([
-                    ft.Text(titulo, size=11, color="grey", weight="bold"),
-                    ft.Text(valor, size=22, weight="bold", color=self.COLOR_MARINO),
+                    ft.Text(titulo, size=9, color="grey", weight="bold"),
+                    ft.Text(valor, size=18, weight="bold", color=self.COLOR_MARINO),
                 ], spacing=0)
             ]),
-            padding=15, bgcolor=self.COLOR_FONDO_CARTA, border_radius=10, expand=True
+            padding=12, bgcolor=self.COLOR_FONDO_CARTA, border_radius=10, expand=True
         )
 
     def build(self):
@@ -61,50 +61,68 @@ class PrincipalConsultasView:
         metricas = ft.Row([
             self.widget_tarjeta("VENTAS HOY", str(resumen.get('ventas_directas', 0)), ft.Icons.SHOPPING_BAG, self.COLOR_VERDE),
             self.widget_tarjeta("INGRESOS", f"${resumen.get('ingresos_hoy', 0):.2f}", ft.Icons.ATTACH_MONEY, self.COLOR_VERDE),
+            self.widget_tarjeta("APARTADOS", str(resumen.get('apartados_creados', 0)), ft.Icons.ADD_TASK, self.COLOR_NARANJA),
             self.widget_tarjeta("POR COBRAR", f"${resumen.get('total_pendiente', 0):.2f}", ft.Icons.MONEY_OFF, self.COLOR_NARANJA),
             self.widget_tarjeta("MERMAS", str(resumen.get('unidades_mermadas', 0)), ft.Icons.DELETE_OUTLINE, self.COLOR_ROJO),
-        ], spacing=15)
+        ], spacing=10)
 
-        # SECCIÓN DE ALERTAS CRÍTICAS (Restaurada)
+        # SECCIÓN DE ALERTAS CRÍTICAS CON DESCRIPCIÓN
         alertas = ft.Row([
             ft.Container(
                 content=ft.Column([
-                    ft.Row([ft.Icon(ft.Icons.LOCAL_SHIPPING, size=18, color=self.COLOR_MARINO), ft.Text("ENTREGAS PRÓXIMAS", weight="bold")]),
-                    ft.Column([ft.Text(f" {e['cliente']} ({e['producto']})", size=11) for e in entregas] if entregas else [ft.Text("Sin entregas", size=11)], scroll=ft.ScrollMode.AUTO, height=70),
+                    ft.Row([ft.Icon(ft.Icons.LOCAL_SHIPPING, size=18, color=self.COLOR_MARINO), ft.Text("ENTREGAS", weight="bold")]),
+                    ft.Text("Pedidos para hoy/mañana", size=9, italic=True, color="black"),
+                    ft.Column([ft.Text(f" {e['cliente']} ({e['producto']})", size=11) for e in entregas] if entregas else [ft.Text("Sin entregas", size=11)], scroll=ft.ScrollMode.AUTO, height=60),
                 ]), expand=1, bgcolor="#E8F5E9", padding=12, border_radius=10
             ),
             ft.Container(
                 content=ft.Column([
                     ft.Row([ft.Icon(ft.Icons.INVENTORY_2, color="white", size=18), ft.Text("STOCK BAJO", weight="bold", color="white")]),
-                    ft.Column([ft.Text(f" {p['producto']}: {p['stock']} pz", color="white", size=11) for p in stock_bajo] if stock_bajo else [ft.Text("Stock OK", color="white", size=11)], scroll=ft.ScrollMode.AUTO, height=70),
+                    ft.Text("Productos por agotarse", size=9, italic=True, color="white"),
+                    ft.Column([ft.Text(f" {p['producto']}: {p['stock']} pz", color="white", size=11) for p in stock_bajo] if stock_bajo else [ft.Text("Stock OK", color="white", size=11)], scroll=ft.ScrollMode.AUTO, height=60),
                 ]), expand=1, bgcolor=self.COLOR_ROJO, padding=12, border_radius=10
             ),
             ft.Container(
                 content=ft.Column([
                     ft.Row([ft.Icon(ft.Icons.EVENT_BUSY, color="white", size=18), ft.Text("CADUCIDAD", weight="bold", color="white")]),
-                    ft.Column([ft.Text(f" {c['producto']}: {c['dias_restantes']} días", color="white", size=11) for c in caducidad] if caducidad else [ft.Text("Sin riesgos", color="white", size=11)], scroll=ft.ScrollMode.AUTO, height=70),
+                    ft.Text("Vencimiento próximo", size=9, italic=True, color="white"),
+                    ft.Column([ft.Text(f" {c['producto']}: {c['dias_restantes']} días", color="white", size=11) for c in caducidad] if caducidad else [ft.Text("Sin riesgos", color="white", size=11)], scroll=ft.ScrollMode.AUTO, height=60),
                 ]), expand=1, bgcolor="#D35400", padding=12, border_radius=10
             )
         ], spacing=15)
 
-        # SECCIÓN DE EFICIENCIA Y NEGOCIO
+        # SECCIÓN DE EFICIENCIA Y NEGOCIO CON DATOS COMPLETOS
         seccion_negocio = ft.Row([
             ft.Container(
                 content=ft.Column([
                     ft.Row([ft.Icon(ft.Icons.ANALYTICS, size=18, color=self.COLOR_MARINO), ft.Text("VENTAS VS MERMAS", weight="bold")]),
-                    ft.Column([ft.Row([ft.Text(f"{b['producto']}", size=11, expand=True), ft.Text(f"V:{int(b['unidades_vendidas'])} / M:{int(b['unidades_merma'])}", size=11, weight="bold")]) for b in balance[:5]], scroll=ft.ScrollMode.AUTO, height=100),
+                    ft.Text("Balance de eficiencia operativa", size=10, italic=True, color="grey"),
+                    ft.Column([
+                        ft.Row([
+                            ft.Text(f"{b['producto']}", size=11, expand=True), 
+                            ft.Text(f"V:{int(b['unidades_vendidas'])}", color=self.COLOR_VERDE, size=10, weight="bold"),
+                            ft.Text("/", size=10),
+                            ft.Text(f"M:{int(b['unidades_merma'])}", color=self.COLOR_ROJO, size=10, weight="bold")
+                        ]) for b in balance[:5]
+                    ], scroll=ft.ScrollMode.AUTO, height=100),
                 ]), expand=1, bgcolor="#F4F6F7", padding=15, border_radius=10, border=ft.Border.all(1, "#DDDDDD")
             ),
             ft.Container(
                 content=ft.Column([
                     ft.Row([ft.Icon(ft.Icons.STAR, size=18, color=self.COLOR_MARINO), ft.Text("PRODUCTOS ESTRELLA", weight="bold")]),
-                    ft.Column([ft.Text(f" {p['producto']}: {p['porcentaje_ventas']}% participación", size=11) for p in estrellas], scroll=ft.ScrollMode.AUTO, height=100),
+                    ft.Text("Participación en el ingreso total", size=10, italic=True, color="grey"),
+                    ft.Column([
+                        ft.Text(f" {p['producto']}: {int(p['unidades_vendidas'])} pzas ({p['porcentaje_ventas']}%)", size=11) for p in estrellas
+                    ], scroll=ft.ScrollMode.AUTO, height=100),
                 ]), expand=1, bgcolor=self.COLOR_FONDO_CARTA, padding=15, border_radius=10
             ),
             ft.Container(
                 content=ft.Column([
-                    ft.Row([ft.Icon(ft.Icons.TRENDING_UP, size=18, color=self.COLOR_MARINO), ft.Text("RENTABILIDAD NETA", weight="bold")]),
-                    ft.Column([ft.Text(f" {r['producto']}: ${r['rentabilidad_neta']:.2f}", size=11) for r in rentabilidad], scroll=ft.ScrollMode.AUTO, height=100)
+                    ft.Row([ft.Icon(ft.Icons.TRENDING_UP, size=18, color=self.COLOR_MARINO), ft.Text("RENTABILIDAD", weight="bold")]),
+                    ft.Text("Ganancia real tras costos", size=10, italic=True, color="grey"),
+                    ft.Column([
+                        ft.Text(f" {r['producto']}: ${r['rentabilidad_neta']:.2f}", size=11, weight="bold", color=self.COLOR_MARINO) for r in rentabilidad
+                    ], scroll=ft.ScrollMode.AUTO, height=100)
                 ]), expand=1, bgcolor=self.COLOR_FONDO_CARTA, padding=15, border_radius=10
             )
         ], spacing=15)
@@ -115,7 +133,7 @@ class PrincipalConsultasView:
                 header,
                 ft.Container(
                     content=ft.Column([
-                        ft.Text("Dashboard Administrativo", size=26, weight="bold", color=self.COLOR_MARINO),
+                        ft.Text("Dashboard de Gestión Administrativa", size=26, weight="bold", color=self.COLOR_MARINO),
                         metricas,
                         ft.Container(
                             content=ft.Row([

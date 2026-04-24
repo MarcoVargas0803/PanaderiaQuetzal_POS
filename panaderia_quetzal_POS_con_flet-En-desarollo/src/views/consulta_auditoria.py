@@ -39,7 +39,7 @@ class ConsultaAuditoriaView:
             bgcolor=color_fondo,
             padding=ft.padding.symmetric(horizontal=8, vertical=4),
             border_radius=5,
-            alignment=ft.alignment.center,
+            alignment=ft.Alignment(0, 0),
             width=70
         )
 
