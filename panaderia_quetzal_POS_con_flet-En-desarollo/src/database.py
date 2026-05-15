@@ -29,12 +29,30 @@ def get_db_connection():
             host=os.getenv("DB_HOST", "localhost"),
             user=db_user,
             password=db_pass,
-            database=os.getenv("DB_NAME", "panaderia")
+            database=os.getenv("DB_NAME", "panaderia"),
+            connect_timeout=3
         )
         yield conexion
     except Error as e:
-        print(f"Error en la base de datos MySQL ({db_user}): {e}")
-        raise e
+        # Errores de red típicos: 2002 (Connection refused), 2003 (Can't connect), 2006 (Server gone), 2013 (Lost connection)
+        if e.errno in (2002, 2003, 2006, 2013):
+            print(f"Error de red al servidor principal ({e}). Intentando con la réplica...")
+            try:
+                conexion = mysql.connector.connect(
+                    host=os.getenv("DB_HOST_REPLICA", "10.0.0.2"),
+                    user=db_user,
+                    password=db_pass,
+                    database=os.getenv("DB_NAME", "panaderia"),
+                    connect_timeout=3
+                )
+                print("¡Conectado al servidor de réplica exitosamente!")
+                yield conexion
+            except Error as replica_error:
+                print(f"Error crítico: Ambos servidores de base de datos están caídos. ({replica_error})")
+                raise replica_error
+        else:
+            # Es un error de permisos o sintaxis (ej. 1142), no de conexión
+            raise e
     finally:
         if conexion:
             try:

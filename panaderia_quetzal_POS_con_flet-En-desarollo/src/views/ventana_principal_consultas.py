@@ -51,7 +51,6 @@ class PrincipalConsultasView:
                 ft.Text("PANEL DE ADMINISTRACIÓN", size=22, weight="bold", color=self.COLOR_MARINO),
                 ft.Row([
                     ft.TextButton("Dashboard", icon=ft.Icons.DASHBOARD, style=ft.ButtonStyle(color=self.COLOR_MARINO)),
-                    ft.TextButton("Producción", icon=ft.Icons.BAKERY_DINING, on_click=lambda _: self.navegar("/ventana_principal_produccion"), style=ft.ButtonStyle(color="grey")),
                 ], spacing=10),
                 ft.ElevatedButton("Salir", icon=ft.Icons.LOGOUT, on_click=lambda _: self.navegar("/"), bgcolor=self.COLOR_ROJO, color="white")
             ], alignment="spaceBetween"),
@@ -91,6 +90,19 @@ class PrincipalConsultasView:
             )
         ], spacing=15)
 
+        # FUNCIONES DE AYUDA PARA GRÁFICOS SENCILLOS
+        def barra_progreso(titulo, valor_str, pct, color):
+            return ft.Column([
+                ft.Row([ft.Text(titulo, size=11, weight="bold"), ft.Text(valor_str, size=11, color=color, weight="bold")], alignment="spaceBetween"),
+                ft.ProgressBar(value=pct, color=color, bgcolor="#E0E0E0", height=8, border_radius=4)
+            ], spacing=2)
+
+        max_rent = max([float(r['rentabilidad_neta']) for r in rentabilidad]) if rentabilidad else 1
+        rentabilidad_ui = ft.Column([barra_progreso(r['producto'], f"${float(r['rentabilidad_neta']):.2f}", min(float(r['rentabilidad_neta'])/max_rent, 1), self.COLOR_VERDE) for r in rentabilidad], spacing=10)
+
+        max_ventas = max([float(p['unidades_vendidas']) for p in estrellas]) if estrellas else 1
+        estrellas_ui = ft.Column([barra_progreso(p['producto'], f"{int(p['unidades_vendidas'])} pzas ({p['porcentaje_ventas']}%)", min(float(p['unidades_vendidas'])/max_ventas, 1), self.COLOR_NARANJA) for p in estrellas], spacing=10)
+
         # SECCIÓN DE EFICIENCIA Y NEGOCIO CON DATOS COMPLETOS
         seccion_negocio = ft.Row([
             ft.Container(
@@ -104,25 +116,21 @@ class PrincipalConsultasView:
                             ft.Text("/", size=10),
                             ft.Text(f"M:{int(b['unidades_merma'])}", color=self.COLOR_ROJO, size=10, weight="bold")
                         ]) for b in balance[:5]
-                    ], scroll=ft.ScrollMode.AUTO, height=100),
+                    ], scroll=ft.ScrollMode.AUTO, height=130),
                 ]), expand=1, bgcolor="#F4F6F7", padding=15, border_radius=10, border=ft.Border.all(1, "#DDDDDD")
             ),
             ft.Container(
                 content=ft.Column([
-                    ft.Row([ft.Icon(ft.Icons.STAR, size=18, color=self.COLOR_MARINO), ft.Text("PRODUCTOS ESTRELLA", weight="bold")]),
+                    ft.Row([ft.Icon(ft.Icons.STAR, size=18, color=self.COLOR_NARANJA), ft.Text("PRODUCTOS ESTRELLA", weight="bold")]),
                     ft.Text("Participación en el ingreso total", size=10, italic=True, color="grey"),
-                    ft.Column([
-                        ft.Text(f" {p['producto']}: {int(p['unidades_vendidas'])} pzas ({p['porcentaje_ventas']}%)", size=11) for p in estrellas
-                    ], scroll=ft.ScrollMode.AUTO, height=100),
+                    ft.Container(content=estrellas_ui, height=130)
                 ]), expand=1, bgcolor=self.COLOR_FONDO_CARTA, padding=15, border_radius=10
             ),
             ft.Container(
                 content=ft.Column([
-                    ft.Row([ft.Icon(ft.Icons.TRENDING_UP, size=18, color=self.COLOR_MARINO), ft.Text("RENTABILIDAD", weight="bold")]),
+                    ft.Row([ft.Icon(ft.Icons.TRENDING_UP, size=18, color=self.COLOR_VERDE), ft.Text("RENTABILIDAD", weight="bold")]),
                     ft.Text("Ganancia real tras costos", size=10, italic=True, color="grey"),
-                    ft.Column([
-                        ft.Text(f" {r['producto']}: ${r['rentabilidad_neta']:.2f}", size=11, weight="bold", color=self.COLOR_MARINO) for r in rentabilidad
-                    ], scroll=ft.ScrollMode.AUTO, height=100)
+                    ft.Container(content=rentabilidad_ui, height=130)
                 ]), expand=1, bgcolor=self.COLOR_FONDO_CARTA, padding=15, border_radius=10
             )
         ], spacing=15)
@@ -139,6 +147,7 @@ class PrincipalConsultasView:
                             content=ft.Row([
                                 self.btn_oscuro("Historial de Ventas", expand=1, on_click=lambda _: self.navegar("/consulta_ventas")),
                                 self.btn_oscuro("Registro de Auditoría", expand=1, on_click=lambda _: self.navegar("/consulta_auditoria")),
+                                ft.ElevatedButton("Catálogos (CRUD)", expand=1, icon=ft.Icons.STORAGE, bgcolor=self.COLOR_MARINO, color="white", on_click=lambda _: self.navegar("/crud_catalogos")),
                             ], spacing=15),
                             padding=ft.padding.symmetric(vertical=10)
                         ),

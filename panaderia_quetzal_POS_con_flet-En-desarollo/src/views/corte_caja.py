@@ -10,14 +10,18 @@ class CorteCajaView:
     def ejecutar_cierre(self, e):
         session = get_session()
         try:
-            monto = float(self.txt_fisico.value or 0)
+            val_str = str(self.txt_fisico.value or "0").replace(",", ".")
+            monto = float(val_str)
+            if monto < 0:
+                raise ValueError("El monto contado no puede ser negativo")
             cerrar_caja(int(session.current_caja_id), monto)
             session.current_caja_id = None
             self.navegar("/")
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(ft.Text(f"Error: {ex}"), bgcolor="red")
-            self.page.snack_bar.open = True
-            self.page.update()
+            print(f"Error al cerrar caja: {ex}")
+            e.page.snack_bar = ft.SnackBar(ft.Text(f"Error BD: {ex}", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
+            e.page.snack_bar.open = True
+            e.page.update()
 
     def build(self):
         session = get_session()

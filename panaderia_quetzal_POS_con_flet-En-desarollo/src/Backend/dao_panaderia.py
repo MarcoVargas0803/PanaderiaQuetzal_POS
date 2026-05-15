@@ -68,7 +68,8 @@ def obtener_corte_caja(caja_id):
 def registrar_cliente(nombre, telefono):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO clientes (nombre, telefono) VALUES (%s, %s)", (nombre, telefono))
+        cursor.callproc("sp_RegistrarCliente", (nombre, telefono))
+        limpiar_cursor(cursor)
         conn.commit()
 
 def obtener_clientes():
@@ -147,10 +148,20 @@ def obtener_resumen_dashboard():
             print(f"Error en métricas: {e}")
     return resumen
 
-def obtener_saldos_apartados():
+def obtener_saldos_apartados(periodo="Todos"):
     with get_db_connection() as conn:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM vista_saldos_apartados ORDER BY saldo_pendiente DESC LIMIT 20")
+        query = "SELECT * FROM vista_saldos_apartados WHERE "
+        if periodo == "Hoy":
+            query += "DATE(fecha_entrega) = CURDATE() "
+        elif periodo == "Esta semana":
+            query += "YEARWEEK(fecha_entrega, 1) = YEARWEEK(CURDATE(), 1) "
+        elif periodo == "Este mes":
+            query += "MONTH(fecha_entrega) = MONTH(CURDATE()) AND YEAR(fecha_entrega) = YEAR(CURDATE()) "
+        else:
+            query += "1=1 "
+        query += "ORDER BY saldo_pendiente DESC LIMIT 50"
+        cursor.execute(query)
         return cursor.fetchall()
 
 def obtener_proximas_entregas():
@@ -180,3 +191,58 @@ def registrar_merma(usuario_id, producto_id, cantidad):
         cursor.callproc("sp_RegistrarMerma", (usuario_id, producto_id, cantidad))
         limpiar_cursor(cursor)
         conn.commit()
+
+def obtener_catalogo(tabla):
+    with get_db_connection() as conn:
+        cursor = conn.cursor(dictionary=True)
+        if tabla not in ['productos', 'usuarios', 'categorias_productos', 'clientes']:
+            return []
+        cursor.execute(f"SELECT * FROM {tabla}")
+        return cursor.fetchall()
+
+def insertar_catalogo(tabla, datos):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if tabla not in ['productos', 'usuarios', 'categorias_productos', 'clientes']:
+            raise ValueError("Tabla no permitida")
+        columnas = ', '.join(datos.keys())
+        valores_placeholder = ', '.join(['%s'] * len(datos))
+        valores = tuple(datos.values())
+        query = f"INSERT INTO {tabla} ({columnas}) VALUES ({valores_placeholder})"
+        cursor.execute(query, valores)
+        conn.commit()
+
+def actualizar_catalogo(tabla, id_columna, id_valor, datos):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if tabla not in ['productos', 'usuarios', 'categorias_productos', 'clientes']:
+            raise ValueError("Tabla no permitida")
+        set_clause = ', '.join([f"{k} = %s" for k in datos.keys()])
+        valores = tuple(datos.values()) + (id_valor,)
+        query = f"UPDATE {tabla} SET {set_clause} WHERE {id_columna} = %s"
+        cursor.execute(query, valores)
+        conn.commit()
+
+def eliminar_catalogo(tabla, id_columna, id_valor):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if tabla not in ['productos', 'usuarios', 'categorias_productos', 'clientes']:
+            raise ValueError("Tabla no permitida")
+        query = f"DELETE FROM {tabla} WHERE {id_columna} = %s"
+        cursor.execute(query, (id_valor,))
+        conn.commit()
+
+def liquidar_apartado(apartado_id, caja_id, monto, metodo_pago):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.callproc("sp_LiquidarApartado", (apartado_id, caja_id, monto, metodo_pago))
+        limpiar_cursor(cursor)
+        conn.commit()
+
+def cancelar_apartado(apartado_id):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.callproc("sp_CancelarApartado", (apartado_id,))
+        limpiar_cursor(cursor)
+        conn.commit()
+

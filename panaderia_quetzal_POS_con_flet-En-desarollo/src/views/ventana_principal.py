@@ -159,9 +159,9 @@ class PrincipalView:
                 ft.Container(content=ft.Text(f"Punto de Venta - ({session.current_user})", color="white", weight=ft.FontWeight.BOLD), bgcolor=self.COLOR_MARINO, padding=10, border_radius=5),
                 ft.Row([
                     ft.TextButton("Venta", icon=ft.Icons.SHOPPING_CART_SHARP, style=ft.ButtonStyle(color=self.COLOR_MARINO)),
-                    ft.TextButton("Producción", icon=ft.Icons.BAKERY_DINING, on_click=lambda _: self.navegar("/ventana_principal_produccion"), style=ft.ButtonStyle(color=ft.Colors.GREY)),
                 ], spacing=20),
                 ft.Row([
+                    ft.ElevatedButton("Liquidar Apartados", icon=ft.Icons.ATTACH_MONEY, on_click=lambda _: self.navegar("/gestionar_apartados"), bgcolor="#27AE60", color="white"),
                     self.btn_blanco("Cerrar Sesión", on_click=lambda _: self.navegar("/")),
                     ft.ElevatedButton("Cerrar Caja", icon=ft.Icons.OUTBOX, on_click=lambda _: self.navegar("/corte_caja"), bgcolor="red", color="white")
                 ], spacing=10)

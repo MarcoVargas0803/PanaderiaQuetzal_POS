@@ -1,5 +1,6 @@
 import flet as ft
 from session_state import get_session
+import os
 
 class LoginView:
     def __init__(self, navegar_callback, page_reference):
@@ -19,13 +20,25 @@ class LoginView:
         import mysql.connector
 
         try:
-            # Conexión maestra silenciosa para buscar el empleado por código
-            conn = mysql.connector.connect(
-                host="localhost",
-                user="admin_quetzal",
-                password="Admin@Quetzal2026",
-                database="panaderia"
-            )
+            # Intento de conexión con Failover (Maestro -> Esclavo)
+            try:
+                conn = mysql.connector.connect(
+                    host=os.getenv("DB_HOST", "localhost"),
+                    user="admin_quetzal",
+                    password="Admin@Quetzal2026",
+                    database=os.getenv("DB_NAME", "panaderia"),
+                    connect_timeout=3
+                )
+            except mysql.connector.Error:
+                print("Maestro caído. Intentando con réplica para Login...")
+                conn = mysql.connector.connect(
+                    host=os.getenv("DB_HOST_REPLICA", "10.0.0.2"),
+                    user="admin_quetzal",
+                    password="Admin@Quetzal2026",
+                    database=os.getenv("DB_NAME", "panaderia"),
+                    connect_timeout=3
+                )
+
             cursor = conn.cursor(dictionary=True)
             cursor.execute("SELECT usuarios_id, rol_id, nombre FROM usuarios WHERE codigo = %s", (pin,))
             usr = cursor.fetchone()
@@ -41,11 +54,24 @@ class LoginView:
             r_id = int(usr['rol_id'])
             nombre = usr['nombre']
             
-            # --- DETECCIÓN DE CAJA CON PRIVILEGIOS DE ADMIN (VERDAD ABSOLUTA) ---
-            # Usamos la misma conexión de arriba que ya es admin
-            conn = mysql.connector.connect(
-                host="localhost", user="admin_quetzal", password="Admin@Quetzal2026", database="panaderia"
-            )
+            # Reutilizamos la lógica de failover para detectar la caja
+            try:
+                conn = mysql.connector.connect(
+                    host=os.getenv("DB_HOST", "localhost"),
+                    user="admin_quetzal",
+                    password="Admin@Quetzal2026",
+                    database=os.getenv("DB_NAME", "panaderia"),
+                    connect_timeout=3
+                )
+            except mysql.connector.Error:
+                conn = mysql.connector.connect(
+                    host=os.getenv("DB_HOST_REPLICA", "10.0.0.2"),
+                    user="admin_quetzal",
+                    password="Admin@Quetzal2026",
+                    database=os.getenv("DB_NAME", "panaderia"),
+                    connect_timeout=3
+                )
+
             cursor = conn.cursor(dictionary=True)
             cursor.execute("SELECT cajas_id FROM cajas WHERE usuarios_id = %s AND fecha_cierre IS NULL LIMIT 1", (session.current_user_id,))
             activa = cursor.fetchone()

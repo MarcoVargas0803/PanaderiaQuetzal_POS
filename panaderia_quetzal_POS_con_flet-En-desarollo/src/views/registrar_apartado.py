@@ -2,6 +2,7 @@ import flet as ft
 from Backend.dao_panaderia import registrar_apartado_detallado, obtener_clientes
 from session_state import get_session
 import time
+from datetime import date, datetime, timedelta
 
 class RegistrarApartadoView:
     def __init__(self, navegar_callback, page_reference):
@@ -16,26 +17,68 @@ class RegistrarApartadoView:
 
     def confirmar(self, e):
         session = get_session()
+
+        # Validar cliente seleccionado
         if not self.dd_cliente.value:
-            self.page.snack_bar = ft.SnackBar(ft.Text("⚠️ Seleccione un cliente"), bgcolor="orange")
+            self.page.snack_bar = ft.SnackBar(ft.Text("⚠️ Seleccione un cliente para continuar"), bgcolor="orange")
             self.page.snack_bar.open = True
             self.page.update()
             return
+
+        # Validar anticipo
+        try:
+            anticipo = round(float(str(self.txt_anticipo.value or "0").replace(",", ".")), 2)
+        except ValueError:
+            self.txt_anticipo.error_text = "Ingrese un monto válido"
+            self.txt_anticipo.update()
+            return
+
+        minimo = round(session.temp_total * 0.20, 2)
+        if anticipo <= 0:
+            self.txt_anticipo.error_text = "El anticipo debe ser mayor a cero"
+            self.txt_anticipo.update()
+            return
+        elif anticipo < minimo:
+            self.txt_anticipo.error_text = f"El anticipo mínimo es ${minimo:.2f} (20% del total)"
+            self.txt_anticipo.update()
+            return
+        elif anticipo > session.temp_total:
+            self.txt_anticipo.error_text = "El anticipo no puede superar el total del pedido"
+            self.txt_anticipo.update()
+            return
+        else:
+            self.txt_anticipo.error_text = None
+            self.txt_anticipo.update()
+
+        # Validar fecha
+        fecha_str = self.txt_fecha.value.strip()
+        try:
+            fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+        except ValueError:
+            self.txt_fecha.error_text = "Formato inválido. Use: AAAA-MM-DD"
+            self.txt_fecha.update()
+            return
+
+        if fecha_obj <= date.today():
+            self.txt_fecha.error_text = "La fecha de entrega debe ser una fecha futura"
+            self.txt_fecha.update()
+            return
+        else:
+            self.txt_fecha.error_text = None
+            self.txt_fecha.update()
 
         try:
             e.control.disabled = True
             e.control.text = "Procesando..."
             self.page.update()
 
-            anticipo = round(float(self.txt_anticipo.value or 0), 2)
             detalles = [{"productos_id": v["producto_id"], "cantidad": v["cantidad"]} for v in session.temp_carrito.values()]
-            
-            # Pasamos el método de pago elegido
+
             registrar_apartado_detallado(
-                int(session.current_user_id), 
-                int(session.current_caja_id), 
+                int(session.current_user_id),
+                int(session.current_caja_id),
                 int(self.dd_cliente.value),
-                self.txt_fecha.value,
+                fecha_str,
                 anticipo,
                 session.temp_total,
                 detalles,
@@ -44,14 +87,14 @@ class RegistrarApartadoView:
 
             session.temp_carrito = {}
             session.temp_total = 0.0
-            
+
             self.page.snack_bar = ft.SnackBar(ft.Text("✅ APARTADO REGISTRADO CON ÉXITO"), bgcolor="#27AE60")
             self.page.snack_bar.open = True
             self.page.update()
-            
+
             time.sleep(1.2)
             self.navegar("/ventana_principal")
-            
+
         except Exception as ex:
             e.control.disabled = False
             e.control.text = "CONFIRMAR Y CREAR APARTADO"
@@ -70,7 +113,8 @@ class RegistrarApartadoView:
         )
         
         self.txt_anticipo = ft.TextField(label="Anticipo Recibido ($)", value=str(round(session.temp_total * 0.20, 2)), width=195)
-        self.txt_fecha = ft.TextField(label="Fecha de Entrega", value="2024-12-31", width=195)
+        fecha_minima = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+        self.txt_fecha = ft.TextField(label="Fecha de Entrega (AAAA-MM-DD)", value=fecha_minima, width=195, hint_text="ej. 2026-06-01")
 
         # Selector de Método de Pago
         selector_pago = ft.Container(

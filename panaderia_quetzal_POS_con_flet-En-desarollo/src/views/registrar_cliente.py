@@ -8,19 +8,34 @@ class RegistrarClienteView:
         self.COLOR_MARINO = "#2C3545"
 
     def guardar(self, e):
-        if not self.txt_nombre.value:
-            self.page.snack_bar = ft.SnackBar(ft.Text("El nombre es obligatorio"), bgcolor="orange")
-            self.page.snack_bar.open = True
-            self.page.update()
+        nombre = self.txt_nombre.value.strip()
+        telefono = self.txt_telefono.value.strip()
+
+        # Validar nombre
+        if not nombre:
+            self.txt_nombre.error_text = "El nombre es obligatorio"
+            self.txt_nombre.update()
             return
-        
+        else:
+            self.txt_nombre.error_text = None
+            self.txt_nombre.update()
+
+        # Validar teléfono: exactamente 10 dígitos numéricos
+        if telefono and (not telefono.isdigit() or len(telefono) != 10):
+            self.txt_telefono.error_text = "El teléfono debe tener exactamente 10 dígitos numéricos"
+            self.txt_telefono.update()
+            return
+        else:
+            self.txt_telefono.error_text = None
+            self.txt_telefono.update()
+
         try:
-            registrar_cliente(self.txt_nombre.value.strip(), self.txt_telefono.value.strip())
+            registrar_cliente(nombre, telefono if telefono else None)
             self.page.snack_bar = ft.SnackBar(ft.Text("¡Cliente registrado con éxito!"), bgcolor="#27AE60")
             self.page.snack_bar.open = True
             self.navegar("/ventana_principal")
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(ft.Text(f"Error: {ex}"), bgcolor="red")
+            self.page.snack_bar = ft.SnackBar(ft.Text(f"Error al registrar: {ex}"), bgcolor="red")
             self.page.snack_bar.open = True
             self.page.update()
 

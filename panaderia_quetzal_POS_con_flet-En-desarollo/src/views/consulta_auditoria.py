@@ -72,23 +72,35 @@ class ConsultaAuditoriaView:
             padding=15, border=ft.Border.only(bottom=ft.BorderSide(1, "#DDDDDD"))
         )
 
+        def set_filter(modulo):
+            if modulo == 'general':
+                data_table.rows = [self.crear_fila(d) for d in datos]
+            else:
+                data_table.rows = [self.crear_fila(d) for d in datos if d['modulo_afectado'].lower() == 'movimientos']
+            self.page.update()
+
+        filtros = ft.Row([
+            ft.ElevatedButton("Auditoría General", icon=ft.Icons.LIST, bgcolor=self.COLOR_MARINO, color="white", on_click=lambda _: set_filter('general')),
+            ft.ElevatedButton("Mermas y Producción (Movimientos)", icon=ft.Icons.WARNING, bgcolor=self.COLOR_NARANJA, color="white", on_click=lambda _: set_filter('movimientos')),
+        ], spacing=10)
+
+        data_table = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("ID")),
+                ft.DataColumn(ft.Text("Fecha/Hora")),
+                ft.DataColumn(ft.Text("Empleado")),
+                ft.DataColumn(ft.Text("Módulo")),
+                ft.DataColumn(ft.Text("Operación")),
+                ft.DataColumn(ft.Text("Detalle del Cambio")),
+            ],
+            rows=[self.crear_fila(d) for d in datos],
+            heading_row_color="#F4F6F7",
+            column_spacing=20,
+            expand=True
+        )
+
         tabla_ui = ft.Container(
-            content=ft.Column([
-                ft.DataTable(
-                    columns=[
-                        ft.DataColumn(ft.Text("ID")),
-                        ft.DataColumn(ft.Text("Fecha/Hora")),
-                        ft.DataColumn(ft.Text("Empleado")),
-                        ft.DataColumn(ft.Text("Módulo")),
-                        ft.DataColumn(ft.Text("Operación")),
-                        ft.DataColumn(ft.Text("Detalle del Cambio")),
-                    ],
-                    rows=[self.crear_fila(d) for d in datos],
-                    heading_row_color="#F4F6F7",
-                    column_spacing=20,
-                    expand=True
-                )
-            ], scroll=ft.ScrollMode.AUTO),
+            content=ft.Column([data_table], scroll=ft.ScrollMode.AUTO),
             padding=20, expand=True
         )
 
@@ -101,6 +113,7 @@ class ConsultaAuditoriaView:
                 ft.Container(
                     content=ft.Column([
                         ft.Text("Bitácora de movimientos en el sistema", size=16, color="grey"),
+                        filtros,
                         tabla_ui
                     ]),
                     padding=20, expand=True

@@ -67,6 +67,12 @@ class App:
             elif self.page.route == "/ventana_principal_consultas":
                 from views.ventana_principal_consultas import PrincipalConsultasView
                 self.page.views.append(PrincipalConsultasView(self.navegar, self.page).build())
+            elif self.page.route == "/crud_catalogos":
+                from views.crud_catalogos import CrudCatalogosView
+                self.page.views.append(CrudCatalogosView(self.navegar, self.page).build())
+            elif self.page.route == "/gestionar_apartados":
+                from views.gestionar_apartados import GestionarApartadosView
+                self.page.views.append(GestionarApartadosView(self.navegar, self.page).build())
             
             self.page.update()
         except Exception as ex:

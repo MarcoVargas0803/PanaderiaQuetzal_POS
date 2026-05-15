@@ -10,16 +10,17 @@ class AbrirCajaView:
 
     def confirmar_apertura(self, e):
         session = get_session()
-        fondo = float(self.txt_fondo.value or 0)
         try:
+            val_str = str(self.txt_fondo.value or "0").replace(",", ".")
+            fondo = float(val_str)
             abrir_caja(session.current_user_id, fondo)
-            # Verificar de nuevo para guardar el ID en sesión
             activa = obtener_caja_activa(session.current_user_id)
             if activa:
-                session.current_caja_id = activa['cajas_id']
+                session.current_caja_id = activa
             self.navegar("/ventana_principal")
         except Exception as ex:
-            e.page.snack_bar = ft.SnackBar(ft.Text(f"Error: {ex}"), bgcolor="red")
+            print(f"Error al abrir caja: {ex}")
+            e.page.snack_bar = ft.SnackBar(ft.Text(f"Error: {ex}", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
             e.page.snack_bar.open = True
             e.page.update()
 

@@ -157,25 +157,24 @@ class PrincipalProduccionView:
     def procesar_transaccion(self, e, tipo_transaccion):
         if not self.lista_produccion:
             return
-            
+
         try:
-            usuario_id = 1 # Usuario Harcodeado por ahora
+            session = get_session()
+            usuario_id = int(session.current_user_id) if session.current_user_id else 1
             for nombre, datos in self.lista_produccion.items():
                 if tipo_transaccion == "Produccion":
                     registrar_produccion(usuario_id, datos["productos_id"], datos["cantidad"])
                 elif tipo_transaccion == "Merma":
                     registrar_merma(usuario_id, datos["productos_id"], datos["cantidad"])
-                    
+
             self.lista_produccion.clear()
             self.actualizar_vista_lista()
-            
-            # Recargar grid para ver el stock actualizado
             self.click_categoria(type('obj', (object,), {'control': type('obj', (object,), {'data': self.categoria_actual})}))
-            
+
             e.control.page.snack_bar = ft.SnackBar(ft.Text(f"{tipo_transaccion} registrada exitosamente. BD Actualizada."))
             e.control.page.snack_bar.open = True
             e.control.page.update()
-            
+
         except Exception as ex:
             e.control.page.snack_bar = ft.SnackBar(ft.Text(f"Error BD: {ex}", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
             e.control.page.snack_bar.open = True
@@ -188,14 +187,16 @@ class PrincipalProduccionView:
         session = get_session()
         rol = getattr(session, "current_role", None)
 
-        btn_venta = ft.TextButton("Venta", icon=ft.Icons.SHOPPING_CART_SHARP, disabled=(rol not in ["admin", "cajero"]), on_click=lambda _: self.navegar("/ventana_principal") ,style=ft.ButtonStyle(color=ft.Colors.GREY))
-        btn_prod = ft.TextButton("Producción", icon=ft.Icons.BAKERY_DINING , style=ft.ButtonStyle(color=self.COLOR_MARINO))
-        btn_cons = ft.TextButton("Consultas", icon=ft.Icons.SEARCH, disabled=(rol != "admin"), on_click=lambda _: self.navegar("/ventana_principal_consultas"), style=ft.ButtonStyle(color=ft.Colors.GREY))
+        # Solo mostrar tabs relevantes al rol
+        nav_tabs = [ft.TextButton("Producción", icon=ft.Icons.BAKERY_DINING, style=ft.ButtonStyle(color=self.COLOR_MARINO))]
+        if rol in ["cajero"]:
+            nav_tabs.insert(0, ft.TextButton("Venta", icon=ft.Icons.SHOPPING_CART_SHARP, on_click=lambda _: self.navegar("/ventana_principal"), style=ft.ButtonStyle(color=ft.Colors.GREY)))
+        # El admin tiene su propio panel y no necesita tabs de otras vistas
 
         header = ft.Container(
             content=ft.Row([
                 ft.Container(content=ft.Text(f"Área de Horneado - ({rol})", color="white", weight=ft.FontWeight.BOLD), bgcolor=self.COLOR_MARINO, padding=10, border_radius=5),
-                ft.Row([btn_venta, btn_prod, btn_cons], spacing=20),
+                ft.Row(nav_tabs, spacing=20),
                 self.btn_blanco("Cerrar Sesión", on_click=lambda _: self.navegar("/"))
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             padding=15, border=ft.Border.only(bottom=ft.BorderSide(2, self.COLOR_MARINO))
