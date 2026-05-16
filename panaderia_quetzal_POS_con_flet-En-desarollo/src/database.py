@@ -9,8 +9,11 @@ import os
 sys.path.append(os.path.dirname(__file__))
 from session_state import get_session
 
-# Esto busca el archivo .env en la raíz del proyecto
-load_dotenv()
+from pathlib import Path
+
+# Configurar la ruta al archivo .env (está un nivel arriba de 'src')
+env_path = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 @contextmanager
 def get_db_connection():
