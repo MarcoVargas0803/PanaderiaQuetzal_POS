@@ -1,6 +1,13 @@
 import flet as ft
 from session_state import get_session
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Asegurar que el .env se cargue robustamente también aquí
+# (parent.parent.parent porque estamos en src/views/login.py)
+env_path = Path(__file__).resolve().parent.parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 class LoginView:
     def __init__(self, navegar_callback, page_reference):
