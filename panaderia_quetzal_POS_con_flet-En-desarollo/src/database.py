@@ -13,7 +13,15 @@ from pathlib import Path
 
 # Configurar la ruta al archivo .env (está un nivel arriba de 'src')
 env_path = Path(__file__).resolve().parent.parent / '.env'
-load_dotenv(dotenv_path=env_path)
+
+if env_path.exists():
+    print(f"✅ Archivo .env encontrado en: {env_path}")
+    load_dotenv(dotenv_path=env_path)
+    print(f"📡 Intentando conectar a HOST: {os.getenv('DB_HOST')}")
+else:
+    print(f"❌ ERROR: No se encontró el archivo .env en: {env_path}")
+    # Intentar carga normal como fallback
+    load_dotenv()
 
 @contextmanager
 def get_db_connection():
