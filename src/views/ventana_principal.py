@@ -5,10 +5,12 @@ from Backend.dao_panaderia import (
 )
 import sys
 import os
+import threading
 from datetime import date, datetime, timedelta
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from session_state import get_session
 from components.Toasts import NotificationHelper
+from views.modal_venta import ModalVenta
 
 class PrincipalView:
     def __init__(self, navegar_callback, page_reference):
@@ -24,10 +26,41 @@ class PrincipalView:
         self.carrito = {}
         self.total = 0.0
         self.metodo_pago_actual = "Efectivo"
+        
+        self.stock_local = {}
+        self.productos_cache = {}
+        self.URL_IMAGENES = {
+            "Concha-Vainilla": "https://images.unsplash.com/photo-1596541603998-f2a87474a006?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+            "Bolillito": "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+            "Dona": "https://images.unsplash.com/photo-1551024506-0cb4a1cb1c26?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+            "default": "https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
+                     
+        }
+        
 
         self.grid_productos = ft.GridView(expand=True, runs_count=5, max_extent=160, child_aspect_ratio=0.8, spacing=15, run_spacing=15)
         self.row_categorias = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=10)
         self.columna_items_carrito = ft.Column(scroll=ft.ScrollMode.AUTO, spacing=5)
+
+        self.modal_venta = ModalVenta(self.page, self.venta_exitosa)
+        
+        self.dialogo_carga = ft.AlertDialog(
+            modal=True,
+            content=ft.Container(
+                content=ft.Column([
+                    ft.ProgressRing(),
+                    ft.Text("Procesando...", weight="bold", color=self.COLOR_MARINO)
+                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20),
+                padding=20, width=200, height=150
+            )
+        )
+
+    def venta_exitosa(self):
+        self.carrito.clear()
+        self.productos_cache.clear()
+        self.stock_local.clear()
+        self.actualizar_carrito_visual()
+        self.renderizar_productos()
 
     def _notificar(self, mensaje, es_error=False):
         self.page.run_task(NotificationHelper.mostrar_toast, self.page, mensaje, es_error)
@@ -229,7 +262,10 @@ class PrincipalView:
                 )
 
                 self.carrito.clear()
+                self.productos_cache.clear()
+                self.stock_local.clear()
                 self.actualizar_carrito_visual()
+                self.renderizar_productos()
 
                 self._notificar("APARTADO REGISTRADO CON ÉXITO", es_error=False)
                 self.cerrar_dialogo_apartado(self.dialogo_apartado)
@@ -285,13 +321,17 @@ class PrincipalView:
         )
 
     def tarjeta_producto(self, pan):
+        nombre = pan["nombre"]
+        url_img = self.URL_IMAGENES.get(nombre, self.URL_IMAGENES["default"])
+        stock_actual = self.stock_local.get(nombre, pan.get("stock", 0))
         return ft.Container(
             content=ft.Column([
-                ft.Image(src="../assets/Concha.png", width=150, height=100, fit="cover", border_radius=ft.BorderRadius.only(top_left=10, top_right=10)),
+                ft.Image(src=url_img, width=150, height=100, fit="cover", border_radius=ft.BorderRadius.only(top_left=10, top_right=10)),
                 ft.Container(
                     content=ft.Column([
-                        ft.Text(pan["nombre"], weight=ft.FontWeight.BOLD, size=16, color=self.COLOR_MARINO),
-                        ft.Text(f"${pan['precio']:.2f}", size=12, color=self.COLOR_MARINO)
+                        ft.Text(nombre, weight=ft.FontWeight.BOLD, size=16, color=self.COLOR_MARINO),
+                        ft.Text(f"${pan['precio']:.2f}", size=12, color=self.COLOR_MARINO),
+                        ft.Text(f"Stock: {stock_actual}", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.RED_700 if stock_actual <= 0 else self.COLOR_MARINO)
                     ], spacing=2),
                     padding=10
                 )
@@ -303,11 +343,39 @@ class PrincipalView:
 
     def item_carrito(self, nombre, datos):
         sub = datos["precio"] * datos["cantidad"]
+        url_img = self.URL_IMAGENES.get(nombre, self.URL_IMAGENES["default"])
+        
+        def cambiar_cantidad(e):
+            try:
+                nueva_cant = int(e.control.value)
+                if nueva_cant < 0: raise ValueError
+                diff = nueva_cant - self.carrito[nombre]["cantidad"]
+                stock_disp = self.stock_local.get(nombre, 0)
+                if diff > stock_disp:
+                    self._notificar("Stock insuficiente", es_error=True)
+                    e.control.value = str(self.carrito[nombre]["cantidad"])
+                    e.control.update()
+                    return
+                self.modificar_cant(nombre, diff)
+            except ValueError:
+                e.control.value = str(self.carrito[nombre]["cantidad"])
+                e.control.update()
+                self._notificar("Cantidad inválida", es_error=True)
+
+        txt_cantidad = ft.TextField(
+            value=str(datos["cantidad"]),
+            width=50, height=35,
+            text_align=ft.TextAlign.CENTER,
+            content_padding=5,
+            on_submit=cambiar_cantidad,
+            on_blur=cambiar_cantidad
+        )
+
         return ft.Container(
             content=ft.Column([
                 # Parte superior: Imagen y Detalles
                 ft.Row([
-                    ft.Image(src="../assets/Concha.png", width=100, height=100, fit="cover", border_radius=5),
+                    ft.Image(src=url_img, width=100, height=100, fit="cover", border_radius=5),
                     ft.Column([
                         ft.Text(nombre, weight="bold", color="white", size=20, overflow=ft.TextOverflow.ELLIPSIS),
                         ft.Text(f"${datos['precio']:.2f} c/u", color=ft.Colors.WHITE70, size=12),
@@ -317,7 +385,7 @@ class PrincipalView:
                 ft.Row([
                     ft.Row([
                         ft.IconButton(icon=ft.Icons.REMOVE_CIRCLE_OUTLINE, icon_color="white", icon_size=20, on_click=lambda _, name=nombre: self.modificar_cant(name, -1)),
-                        ft.Text(str(datos["cantidad"]), weight="bold", color="white", size=14),
+                        txt_cantidad,
                         ft.IconButton(icon=ft.Icons.ADD_CIRCLE_OUTLINE, icon_color="white", icon_size=20, on_click=lambda _, name=nombre: self.modificar_cant(name, 1)),
                         ft.IconButton(icon=ft.Icons.DELETE_OUTLINE, icon_color=ft.Colors.RED_300, icon_size=20, on_click=lambda _, name=nombre: self.modificar_cant(name, -datos["cantidad"])),
                     ], spacing=0),
@@ -331,13 +399,53 @@ class PrincipalView:
         categorias = ["Dulces", "Salados", "Especial"]
         self.row_categorias.controls = [self.categoria_pill(c) for c in categorias]
 
+    def mostrar_carga(self):
+        if hasattr(self.page, "open"):
+            self.page.open(self.dialogo_carga)
+        else:
+            if self.dialogo_carga not in self.page.overlay:
+                self.page.overlay.append(self.dialogo_carga)
+            self.dialogo_carga.open = True
+            self.page.update()
+
+    def ocultar_carga(self):
+        if hasattr(self.page, "close"):
+            self.page.close(self.dialogo_carga)
+        else:
+            self.dialogo_carga.open = False
+            self.page.update()
+
     def renderizar_productos(self):
+        if self.categoria_actual in self.productos_cache:
+            self._mostrar_grid_cache()
+            self.actualizar_header_visual()
+        else:
+            self.mostrar_carga()
+            threading.Thread(target=self._cargar_productos_db, args=(self.categoria_actual,), daemon=True).start()
+
+    def _cargar_productos_db(self, categoria):
         mapa = {"Salados": "Pan salado", "Dulces": "Pan dulce", "Especial": "Pan especial"}
         try:
-            prods = obtener_productos_por_categoria(mapa.get(self.categoria_actual, "Pan salado"))
-            self.grid_productos.controls = [self.tarjeta_producto(p) for p in prods]
-            self.actualizar_header_visual()
-        except: pass
+            prods = obtener_productos_por_categoria(mapa.get(categoria, "Pan salado"))
+            self.productos_cache[categoria] = prods
+            for p in prods:
+                if p["nombre"] not in self.stock_local:
+                    self.stock_local[p["nombre"]] = p.get("stock", 0)
+        except Exception as e:
+            self.productos_cache[categoria] = []
+            print(f"Error cargando BD: {e}")
+            
+        self.page.run_task(self._actualizar_grid_async)
+
+    async def _actualizar_grid_async(self):
+        self.ocultar_carga()
+        self._mostrar_grid_cache()
+        self.actualizar_header_visual()
+
+    def _mostrar_grid_cache(self):
+        prods = self.productos_cache.get(self.categoria_actual, [])
+        self.grid_productos.controls = [self.tarjeta_producto(p) for p in prods]
+        self.page.update()
 
     def actualizar_header_visual(self):
         try:
@@ -361,14 +469,23 @@ class PrincipalView:
 
     def click_categoria(self, e):
         self.categoria_actual = e.control.data
-        self.renderizar_productos()
         self.renderizar_categorias()
-        self.page.update()
+        self.renderizar_productos()
 
     def agregar_al_carrito(self, p):
         n = p["nombre"]
+        stock_disp = self.stock_local.get(n, p.get("stock", 0))
+        if stock_disp <= 0:
+            self._notificar(f"No hay stock de {n}", es_error=True)
+            return
+
+        # Descontar local
+        self.stock_local[n] = stock_disp - 1
+
         if n in self.carrito: self.carrito[n]["cantidad"] += 1
         else: self.carrito[n] = {"producto_id": int(p["productos_id"]), "precio": float(p["precio"]), "cantidad": 1}
+        
+        self._mostrar_grid_cache()
         self.actualizar_carrito_visual()
 
     def actualizar_carrito_visual(self):
@@ -379,21 +496,22 @@ class PrincipalView:
 
     def modificar_cant(self, n, d):
         if n in self.carrito:
+            if d > 0 and self.stock_local.get(n, 0) < d:
+                self._notificar(f"Stock insuficiente para {n}", es_error=True)
+                return
+            
+            self.stock_local[n] = self.stock_local.get(n, 0) - d
             self.carrito[n]["cantidad"] += d
             if self.carrito[n]["cantidad"] <= 0: self.carrito.pop(n)
+            
+        self._mostrar_grid_cache()
         self.actualizar_carrito_visual()
 
     def finalizar_venta(self, e):
-        if not self.carrito: return
-        session = get_session()
-        detalles = [{"productos_id": v["producto_id"], "cantidad": v["cantidad"]} for v in self.carrito.values()]
-        try:
-            registrar_venta_directa(int(session.current_user_id), int(session.current_caja_id), self.total, detalles, self.metodo_pago_actual)
-            self.carrito.clear()
-            self.actualizar_carrito_visual()
-            self._notificar("Venta Exitosa", es_error=False)
-        except Exception as ex:
-            self._notificar(f"Error: {ex}", es_error=True)
+        if not self.carrito: 
+            self._notificar("El carrito está vacío", es_error=True)
+            return
+        self.modal_venta.show(self.carrito, self.total)
 
     def build(self):
         session = get_session()
