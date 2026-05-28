@@ -29,16 +29,10 @@ class PrincipalView:
         
         self.stock_local = {}
         self.productos_cache = {}
-        self.URL_IMAGENES = {
-            "Concha-Vainilla": "https://images.unsplash.com/photo-1596541603998-f2a87474a006?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-            "Bolillito": "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-            "Dona": "https://images.unsplash.com/photo-1551024506-0cb4a1cb1c26?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-            "default": "https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-                     
-        }
+        
         
 
-        self.grid_productos = ft.GridView(expand=True, runs_count=5, max_extent=160, child_aspect_ratio=0.8, spacing=15, run_spacing=15)
+        self.grid_productos = ft.GridView(expand=True, runs_count=4, max_extent=220, child_aspect_ratio=0.75, spacing=20, run_spacing=20)
         self.row_categorias = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=10)
         self.columna_items_carrito = ft.Column(scroll=ft.ScrollMode.AUTO, spacing=5)
 
@@ -312,38 +306,38 @@ class PrincipalView:
     def categoria_pill(self, texto):
         es_activo = self.categoria_actual == texto
         return ft.Container(
-            content=ft.Text(texto, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE if es_activo else self.COLOR_MARINO),
+            content=ft.Text(texto, size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE if es_activo else self.COLOR_MARINO),
             bgcolor=self.COLOR_MARINO if es_activo else self.COLOR_GRIS_CLARO,
-            padding=ft.Padding(left=20, top=10, right=20, bottom=10),
-            border_radius=15,
+            padding=ft.Padding(left=25, top=12, right=25, bottom=12),
+            border_radius=20,
             data=texto,
             on_click=self.click_categoria
         )
 
     def tarjeta_producto(self, pan):
         nombre = pan["nombre"]
-        url_img = self.URL_IMAGENES.get(nombre, self.URL_IMAGENES["default"])
+        url_img = pan.get("url_imagen")
         stock_actual = self.stock_local.get(nombre, pan.get("stock", 0))
         return ft.Container(
             content=ft.Column([
-                ft.Image(src=url_img, width=150, height=100, fit="cover", border_radius=ft.BorderRadius.only(top_left=10, top_right=10)),
+                ft.Image(src=url_img, width=220, height=130, fit="cover", border_radius=ft.BorderRadius.only(top_left=10, top_right=10)),
                 ft.Container(
                     content=ft.Column([
-                        ft.Text(nombre, weight=ft.FontWeight.BOLD, size=16, color=self.COLOR_MARINO),
-                        ft.Text(f"${pan['precio']:.2f}", size=12, color=self.COLOR_MARINO),
-                        ft.Text(f"Stock: {stock_actual}", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.RED_700 if stock_actual <= 0 else self.COLOR_MARINO)
-                    ], spacing=2),
+                        ft.Text(nombre, weight=ft.FontWeight.BOLD, size=18, color=self.COLOR_MARINO),
+                        ft.Text(f"${pan['precio']:.2f}", size=14, color=self.COLOR_MARINO),
+                        ft.Text(f"Stock: {stock_actual}", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.RED_700 if stock_actual <= 0 else self.COLOR_MARINO)
+                    ], spacing=4),
                     padding=10
                 )
-            ], spacing=0),
+            ], spacing=2),
             bgcolor=self.COLOR_FONDO_CARTA,
-            border_radius=10, width=150,
+            border_radius=10, width=220,
             on_click=lambda _: self.agregar_al_carrito(pan),
         )
 
     def item_carrito(self, nombre, datos):
         sub = datos["precio"] * datos["cantidad"]
-        url_img = self.URL_IMAGENES.get(nombre, self.URL_IMAGENES["default"])
+        url_img = datos.get("url_imagen")
         
         def cambiar_cantidad(e):
             try:
@@ -483,7 +477,7 @@ class PrincipalView:
         self.stock_local[n] = stock_disp - 1
 
         if n in self.carrito: self.carrito[n]["cantidad"] += 1
-        else: self.carrito[n] = {"producto_id": int(p["productos_id"]), "precio": float(p["precio"]), "cantidad": 1}
+        else: self.carrito[n] = {"producto_id": int(p["productos_id"]), "precio": float(p["precio"]), "cantidad": 1, "url_imagen": p.get("url_imagen")}
         
         self._mostrar_grid_cache()
         self.actualizar_carrito_visual()

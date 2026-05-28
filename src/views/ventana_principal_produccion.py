@@ -27,8 +27,8 @@ class PrincipalProduccionView:
         
         # REFERENCIAS VISUALES
         self.grid_productos = ft.GridView(
-            expand=True, runs_count=5, max_extent=160,
-            child_aspect_ratio=0.8, spacing=15, run_spacing=15,
+            expand=True, runs_count=4, max_extent=220,
+            child_aspect_ratio=0.75, spacing=20, run_spacing=20,
         )
         self.row_categorias = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=10)
         self.columna_items_listado = ft.Column(scroll=ft.ScrollMode.AUTO, spacing=5)
@@ -52,47 +52,71 @@ class PrincipalProduccionView:
     def categoria_pill(self, texto):
         es_activo = self.categoria_actual == texto
         return ft.Container(
-            content=ft.Text(texto, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE if es_activo else self.COLOR_MARINO),
+            content=ft.Text(texto, size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE if es_activo else self.COLOR_MARINO),
             bgcolor=self.COLOR_MARINO if es_activo else self.COLOR_GRIS_CLARO,
-            padding=ft.Padding.symmetric(horizontal=20, vertical=10),
-            border_radius=15,
+            padding=ft.Padding(left=25, top=12, right=25, bottom=12),
+            border_radius=20,
             data=texto,
             on_click=self.click_categoria
         )
 
-    def tarjetas_productos(self, lista_datos, url_imagen="../assets/Concha.png"):
+    def tarjetas_productos(self, lista_datos):
         lista_tarjetas = []
         for pan in lista_datos:
+            url_img = pan.get("url_imagen")
+            
             tarjeta = ft.Container(
                 content=ft.Column([
-                    ft.Image(src=url_imagen, width=150, height=100, fit=1, border_radius=ft.BorderRadius.only(top_left=10, top_right=10)),
+                    ft.Image(src=url_img, width=220, height=130, fit="cover", border_radius=ft.BorderRadius.only(top_left=10, top_right=10)),
                     ft.Container(
                         content=ft.Column([
-                            ft.Text(pan["nombre"], weight=ft.FontWeight.BOLD, size=16, color=self.COLOR_MARINO),
-                            ft.Text(f"Stock actual: {pan['stock']}", size=12, color=self.COLOR_MARINO)
+                            ft.Text(pan["nombre"], weight=ft.FontWeight.BOLD, size=18, color=self.COLOR_MARINO, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                            ft.Text(f"Stock actual: {pan['stock']}", size=14, color=self.COLOR_MARINO)
                         ], spacing=2),
                         padding=10
                     )
                 ], spacing=0),
                 bgcolor=self.COLOR_FONDO_CARTA,
-                border_radius=10, width=150,
+                border_radius=10, width=220,
                 on_click=lambda e, p=pan: self.agregar_a_lista(p),
             )
             lista_tarjetas.append(tarjeta)
         return lista_tarjetas
 
     def item_lista(self, nombre, datos):
+        url_img = datos.get("url_imagen")
+        
+        def cambiar_cantidad(e):
+            try:
+                nueva_cant = int(e.control.value)
+                if nueva_cant < 0: raise ValueError
+                diff = nueva_cant - self.lista_produccion[nombre]["cantidad"]
+                self.modificar_cantidad(nombre, diff)
+            except ValueError:
+                e.control.value = str(self.lista_produccion[nombre]["cantidad"])
+                e.control.update()
+                self._notificar("Cantidad inválida", es_error=True)
+
+        txt_cantidad = ft.TextField(
+            value=str(datos["cantidad"]),
+            width=50, height=35,
+            text_align=ft.TextAlign.CENTER,
+            content_padding=5,
+            on_submit=cambiar_cantidad,
+            on_blur=cambiar_cantidad
+        )
+
         return ft.Container(
             content=ft.Row([
                 ft.Column([
-                    ft.Image(src="../assets/Concha.png", fit=1, border_radius=ft.BorderRadius.only(top_left=10, top_right=10)),
+                    ft.Image(src=url_img, fit="cover", border_radius=ft.BorderRadius.only(top_left=10, top_right=10)),
                 ], expand=True, spacing=0),
                 ft.Column([
                     ft.Text(nombre, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE, size=14),
                 ], expand=True, spacing=0),
                 ft.Row([
                     ft.IconButton(icon=ft.Icons.REMOVE_CIRCLE_OUTLINE, icon_color=ft.Colors.WHITE_70, icon_size=20, on_click=lambda _: self.modificar_cantidad(nombre, -1)),
-                    ft.Text(str(datos["cantidad"]), weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                    txt_cantidad,
                     ft.IconButton(icon=ft.Icons.ADD_CIRCLE_OUTLINE, icon_color=ft.Colors.WHITE_70, icon_size=20, on_click=lambda _: self.modificar_cantidad(nombre, 1)),
                     ft.IconButton(icon=ft.Icons.DELETE_OUTLINE, icon_color=ft.Colors.RED_300, icon_size=20, on_click=lambda _: self.borrar_de_lista(nombre)),
                 ], spacing=0)
@@ -132,7 +156,8 @@ class PrincipalProduccionView:
         else:
             self.lista_produccion[nombre] = {
                 "productos_id": pan.get("productos_id", 0), 
-                "cantidad": 1
+                "cantidad": 1,
+                "url_imagen": pan.get("url_imagen")
             }
         self.actualizar_vista_lista()
 

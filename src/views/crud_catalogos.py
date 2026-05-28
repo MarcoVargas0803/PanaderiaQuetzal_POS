@@ -19,7 +19,7 @@ class CrudCatalogosView:
         
         # Mapeo de tablas y sus claves primarias
         self.config_tablas = {
-            "productos": {"pk": "productos_id", "columnas": ["nombre", "precio", "stock", "tiempo_vida", "temporadas_id", "categorias_id"]},
+            "productos": {"pk": "productos_id", "columnas": ["nombre", "precio", "stock", "tiempo_vida", "temporadas_id", "categorias_id", "url_imagen"]},
             "usuarios": {"pk": "usuarios_id", "columnas": ["nombre", "codigo", "rol_id"]},
             "clientes": {"pk": "clientes_id", "columnas": ["nombre", "telefono"]},
             "categorias_productos": {"pk": "categorias_id", "columnas": ["descripcion"]}
@@ -47,6 +47,9 @@ class CrudCatalogosView:
         
         for col in columnas:
             valor = str(registro.get(col, "")) if not es_nuevo else ""
+            if col == "url_imagen" and not valor:
+                valor = "productos/default_image.jpg"
+                
             campos[col] = ft.TextField(label=col.replace('_', ' ').title(), value=valor, width=300)
 
         def guardar(e):
